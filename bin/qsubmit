@@ -1,0 +1,163 @@
+#!/usr/bin/env python
+# -"- coding: utf-8 -"-
+
+from argparse import ArgumentParser
+from tempfile import NamedTemporaryFile
+import os
+import subprocess
+import re
+
+
+LOCATIONS = {
+    'robotarium': {
+        'engine': 'slurm',
+        'hostname-d': r'cm\.cluster',
+    },
+    'ufal': {
+        'engine': 'sge',
+        'hostname-d': r'.*ms.mff.cuni.cz',
+    },
+}
+
+
+ENGINES = {
+    'sge': {
+        'script': {
+            'print_info': 'qstat -j <JOB_ID>',
+            'resource_cmd': '',
+            'info_cmd': '',
+            'maxvmem_cmd': '',
+            'usage_cmd': '',
+            'load_profile_cmd': '[ -e /net/projects/SGE/user/sge_profile ] && . /net/projects/SGE/user/sge_profile',
+        }
+    },
+    'robotarium': {
+        'submit_cmd': 'sbatch -o <NAME>.o%j',
+        'params': {
+            'name': '-J <NAME>',
+            'mem': '--mem=<MEM>',
+            'cpus': '-c <CPUS>',
+            'queue': '-p <QUEUE>',
+        },
+        'script': {
+            'print_info': 'echo "NOT IMPLEMENTED"',
+            'resource_cmd': 'echo "NOT IMPLEMENTED"',
+            'info_cmd': 'echo "NOT IMPLEMENTED"',
+            'maxvmem_cmd': 'echo "NOT IMPLEMENTED"',
+            'usage_cmd': 'echo "NOT IMPLEMENTED"',
+            'load_profile_cmd': '',
+        }
+    },
+}
+
+
+SCRIPT_TEMPLATE = '''#!/bin/bash
+
+sdate=`date`  # start date
+
+# load UFAL SGE profile, if exists
+<LOAD_PROFILE_CMD>
+
+hard=$(<RESOURCE_CMD>)
+
+echo "=============================="
+echo "== Server:    "`hostname`
+echo "== Directory: "`pwd`
+echo '== Command:   <MAIN_CMD_ESC>'
+echo "== Hard res:  $hard"
+echo "== Started:   $sdate"
+echo "== Sourcing:  $HOME/.bashrc"
+echo "=============================="
+
+# Source the bashrc
+. $HOME/.bashrc
+
+# Renice ourselves
+renice 10 $$
+
+# Run the command and collect exit status
+<MAIN_CMD>
+exitstatus=$?
+
+if [ 0 != "$exitstatus" ]; then
+  exitinfo="FAILED (exit status $exitstatus)"
+fi
+
+fdate=`date`
+
+# remove this temporary script
+rm <SCRIPT_TMPFILE>
+
+# print all we know about ourselves
+<INFO_CMD>
+
+echo "Getting usage and peak mem info (works for SGE, not PBS yet)"
+usage=$(<USAGE_CMD>)
+maxvmem=$(<MAXVMEM_CMD>)
+
+duration=$SECONDS
+duration=$((duration / 3600)):`printf '%02d' $(((duration / 60) % 60))`:`printf '%02d' $((duration % 60))`
+
+echo "=============================="
+echo "== Server:    "`hostname`
+echo "== Directory: "`pwd`
+echo '== Command:   <MAIN_CMD_ESC>'
+echo "== Usage:     $usage"
+echo "== Peak mem:  $maxvmem"
+echo "== Started:   $sdate"
+echo "== Finished:  $fdate     $exitinfo"
+echo "== Duration:  $duration"
+echo "=============================="
+'''
+
+
+def detect_location():
+    # XXX
+    return 'robotarium'
+
+
+def run_script(args):
+    # determine location
+    location = args.location or detect_location()
+    engine = ENGINES[location]
+
+    # create a script tempfile
+    script_tmpfile = NamedTemporaryFile(suffix='.bash', prefix='.qsubmit-', dir=os.getcwd(), delete=False)
+    
+    # create script text
+    script_text = SCRIPT_TEMPLATE
+    for var_name, value in engine['script'].iteritems():
+        script_text = script_text.replace('<' + var_name.upper() + '>', value)
+    script_text = script_text.replace('<SCRIPT_TMPFILE>', script_tmpfile.name)
+    main_cmd = " ".join(args.command)
+    script_text = script_text.replace('<MAIN_CMD>', main_cmd)
+    script_text = script_text.replace('<MAIN_CMD_ESC>', main_cmd.replace("'", "'\"'\"'")) 
+
+    # print it into a tempfile and close it
+    script_tmpfile.write(script_text)
+    script_tmpfile.close()
+
+    # get the engine params (replace job name in the main command if needed)
+    # TODO use something more intelligent than "split(' ')"
+    run_cmd = engine['submit_cmd'].replace('<NAME>', args.name or 'qsubmit').split(' ')
+    for param in engine['params']:
+        val = vars(args).get(param)
+        if val:
+            arg = engine['params'][param].replace('<' + param.upper() + '>', str(val))
+            run_cmd.extend(arg.split(' '))
+    run_cmd.append(script_tmpfile.name)
+    # run the command
+    subprocess.call(run_cmd)
+
+
+if __name__ == '__main__':
+    ap = ArgumentParser()
+    ap.add_argument('--location', help='Override location detection')
+    ap.add_argument('-n', '--name', help='Command name', default='qsubmit')
+    ap.add_argument('-q', '--queue', help='Name of the queue to send the command to')
+    ap.add_argument('-c', '--cpus', help='Number of CPU cores to use', type=int, default=1)
+    ap.add_argument('-m', '--mem', help='Amount of memory to use', default='1g')
+    ap.add_argument('command', nargs='+', help='The arguments for the command to be run')
+
+    args=ap.parse_args()
+    run_script(args)
