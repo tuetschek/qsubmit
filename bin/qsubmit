@@ -5,7 +5,6 @@ from argparse import ArgumentParser
 from tempfile import NamedTemporaryFile
 import os
 import subprocess
-import re
 
 
 LOCATIONS = {
@@ -48,6 +47,18 @@ ENGINES = {
             'load_profile_cmd': '',
         }
     },
+    'console': {
+        'submit_cmd': 'bash',
+        'params': {},
+        'script': {
+            'print_info': 'echo "NOT IMPLEMENTED"',
+            'resource_cmd': 'echo "NOT IMPLEMENTED"',
+            'info_cmd': 'echo "NOT IMPLEMENTED"',
+            'maxvmem_cmd': 'echo "NOT IMPLEMENTED"',
+            'usage_cmd': 'echo "NOT IMPLEMENTED"',
+            'load_profile_cmd': '',
+        }
+    }
 }
 
 
@@ -75,6 +86,8 @@ echo "=============================="
 # Renice ourselves
 renice 10 $$
 
+echo "=============================="
+
 # Run the command and collect exit status
 <MAIN_CMD>
 exitstatus=$?
@@ -83,15 +96,18 @@ if [ 0 != "$exitstatus" ]; then
   exitinfo="FAILED (exit status $exitstatus)"
 fi
 
+echo "=============================="
+
 fdate=`date`
 
 # remove this temporary script
 rm <SCRIPT_TMPFILE>
 
 # print all we know about ourselves
+echo "Batch job information:"
 <INFO_CMD>
 
-echo "Getting usage and peak mem info (works for SGE, not PBS yet)"
+echo "Getting usage and peak mem info (works for SGE, not PBS yet)..."
 usage=$(<USAGE_CMD>)
 maxvmem=$(<MAXVMEM_CMD>)
 
@@ -117,13 +133,16 @@ def detect_location():
 
 
 def run_script(args):
-    # determine location
-    location = args.location or detect_location()
-    engine = ENGINES[location]
+    # determine location or use engine override
+    if args.engine:
+        engine = ENGINES[args.engine]
+    else:
+        location = args.location or detect_location()
+        engine = ENGINES[location]
 
     # create a script tempfile
     script_tmpfile = NamedTemporaryFile(suffix='.bash', prefix='.qsubmit-', dir=os.getcwd(), delete=False)
-    
+
     # create script text
     script_text = SCRIPT_TEMPLATE
     for var_name, value in engine['script'].iteritems():
@@ -131,7 +150,7 @@ def run_script(args):
     script_text = script_text.replace('<SCRIPT_TMPFILE>', script_tmpfile.name)
     main_cmd = " ".join(args.command)
     script_text = script_text.replace('<MAIN_CMD>', main_cmd)
-    script_text = script_text.replace('<MAIN_CMD_ESC>', main_cmd.replace("'", "'\"'\"'")) 
+    script_text = script_text.replace('<MAIN_CMD_ESC>', main_cmd.replace("'", "'\"'\"'"))
 
     # print it into a tempfile and close it
     script_tmpfile.write(script_text)
@@ -151,8 +170,9 @@ def run_script(args):
 
 
 if __name__ == '__main__':
-    ap = ArgumentParser()
+    ap = ArgumentParser(description='Batch engine script submission wrapper')
     ap.add_argument('--location', help='Override location detection')
+    ap.add_argument('--engine', help='Use the given batch engine (instead of location default)')
     ap.add_argument('-n', '--name', help='Command name', default='qsubmit')
     ap.add_argument('-q', '--queue', help='Name of the queue to send the command to')
     ap.add_argument('-c', '--cpus', help='Number of CPU cores to use', type=int, default=1)
