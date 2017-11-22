@@ -32,7 +32,7 @@ ENGINES = {
         }
     },
     'slurm': {
-        'submit_cmd': 'sbatch -o <NAME>.o%j',
+        'submit_cmd': 'sbatch -o <LOGDIR><NAME>.o%j',
         'params': {
             'name': '-J <NAME>',
             'mem': '--mem=<MEM>',
@@ -158,9 +158,10 @@ def run_script(args):
     script_tmpfile.write(script_text)
     script_tmpfile.close()
 
-    # get the engine params (replace job name in the main command if needed)
-    # TODO use something more intelligent than "split(' ')"
-    run_cmd = engine['submit_cmd'].replace('<NAME>', args.name or 'qsubmit').split(' ')
+    # get the engine params (replace job name + logdir in the main command)
+    run_cmd = engine['submit_cmd'].replace('<NAME>', args.name or 'qsubmit')
+    run_cmd = run_cmd.replace('<LOGDIR>', (args.logdir or '.') + '/')
+    run_cmd = run_cmd.split(' ')  # TODO use something more intelligent than "split(' ')"
     for param in engine['params']:
         val = vars(args).get(param)
         if val:
@@ -183,6 +184,7 @@ if __name__ == '__main__':
     ap.add_argument('-q', '--queue', help='Name of the queue to send the command to')
     ap.add_argument('-c', '--cpus', help='Number of CPU cores to use', type=int, default=1)
     ap.add_argument('-m', '--mem', help='Amount of memory to use', default='1g')
+    ap.add_argument('-l', '--logdir', help='Directory where the log file will be stored')
     ap.add_argument('-w', '--hold', '--wait', help='Hold until jobs with the given IDs are completed',
                     nargs='*', default=[], type=int)
     ap.add_argument('command', nargs='+', help='The arguments for the command to be run')
