@@ -5,8 +5,9 @@ from argparse import ArgumentParser
 from tempfile import NamedTemporaryFile
 import os
 import subprocess
+import sys
 
-
+# TODO: allow .qsubmitrc to override this
 LOCATIONS = {
     'robotarium': {
         'engine': 'slurm',
@@ -30,13 +31,14 @@ ENGINES = {
             'load_profile_cmd': '[ -e /net/projects/SGE/user/sge_profile ] && . /net/projects/SGE/user/sge_profile',
         }
     },
-    'robotarium': {
+    'slurm': {
         'submit_cmd': 'sbatch -o <NAME>.o%j',
         'params': {
             'name': '-J <NAME>',
             'mem': '--mem=<MEM>',
             'cpus': '-c <CPUS>',
             'queue': '-p <QUEUE>',
+            'hold': '-d afterany:<HOLD>',
         },
         'script': {
             'print_info': 'echo "NOT IMPLEMENTED"',
@@ -138,7 +140,7 @@ def run_script(args):
         engine = ENGINES[args.engine]
     else:
         location = args.location or detect_location()
-        engine = ENGINES[location]
+        engine = ENGINES[LOCATIONS[location]['engine']]
 
     # create a script tempfile
     script_tmpfile = NamedTemporaryFile(suffix='.bash', prefix='.qsubmit-', dir=os.getcwd(), delete=False)
@@ -162,10 +164,14 @@ def run_script(args):
     for param in engine['params']:
         val = vars(args).get(param)
         if val:
-            arg = engine['params'][param].replace('<' + param.upper() + '>', str(val))
-            run_cmd.extend(arg.split(' '))
+            if not isinstance(val, list):  # multiple values: repeat the parameter
+                val = [val]
+            for val_ in val:
+                arg = engine['params'][param].replace('<' + param.upper() + '>', str(val_))
+                run_cmd.extend(arg.split(' '))
     run_cmd.append(script_tmpfile.name)
     # run the command
+    # TODO read output and get the id of the process
     subprocess.call(run_cmd)
 
 
@@ -177,6 +183,8 @@ if __name__ == '__main__':
     ap.add_argument('-q', '--queue', help='Name of the queue to send the command to')
     ap.add_argument('-c', '--cpus', help='Number of CPU cores to use', type=int, default=1)
     ap.add_argument('-m', '--mem', help='Amount of memory to use', default='1g')
+    ap.add_argument('-w', '--hold', '--wait', help='Hold until jobs with the given IDs are completed',
+                    nargs='*', default=[], type=int)
     ap.add_argument('command', nargs='+', help='The arguments for the command to be run')
 
     args=ap.parse_args()
