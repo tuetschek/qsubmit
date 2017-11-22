@@ -180,9 +180,9 @@ if __name__ == '__main__':
     ap = ArgumentParser(description='Batch engine script submission wrapper')
     ap.add_argument('--location', help='Override location detection')
     ap.add_argument('--engine', help='Use the given batch engine (instead of location default)')
-    ap.add_argument('-n', '--name', help='Command name', default='qsubmit')
+    ap.add_argument('-n', '--name', '--jobname', help='Job name', default='qsubmit')
     ap.add_argument('-q', '--queue', help='Name of the queue to send the command to')
-    ap.add_argument('-c', '--cpus', help='Number of CPU cores to use', type=int, default=1)
+    ap.add_argument('-c', '--cpus', '--cores', help='Number of CPU cores to use', type=int, default=1)
     ap.add_argument('-m', '--mem', help='Amount of memory to use', default='1g')
     ap.add_argument('-l', '--logdir', help='Directory where the log file will be stored')
     ap.add_argument('-w', '--hold', '--wait', help='Hold until jobs with the given IDs are completed',
