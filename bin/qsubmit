@@ -21,7 +21,7 @@ LOCATIONS = {
     },
     'bwlf': {
         'engine': 'grun',
-        'hostname': r'bwlf.*',
+        'hostname': r'(bwlf.*|jove|amaterasu|osiris)',
     }
 }
 
@@ -38,7 +38,8 @@ ENGINES = {
         }
     },
     'grun': {
-        'submit_cmd': 'qsub -oe <LOGDIR><NAME>.o%j',
+        'submit_cmd': 'grun -oe <LOGDIR><NAME>.o%j -nowait',
+        'script_prepend': '/bin/bash',
         'params': {
             'name': '-j <NAME>',
             'mem': '--mem=<MEM>',
@@ -198,7 +199,12 @@ def run_script(args):
             for val_ in val:
                 arg = engine['params'][param].replace('<' + param.upper() + '>', str(val_))
                 run_cmd.extend(arg.split(' '))
+    if 'script_prepend' in engine:
+        run_cmd.append(engine['script_prepend'])
     run_cmd.append(script_tmpfile.name)
+    # print the final command for clarity
+    print >> sys.stderr, 'Qsubmit command:\n', ' '.join(['"%s"' % tok if ' ' in tok else tok
+                                                         for tok in run_cmd])
     # run the command
     # TODO read output and get the id of the process
     subprocess.call(run_cmd)
