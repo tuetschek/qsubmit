@@ -3,20 +3,26 @@
 
 from argparse import ArgumentParser
 from tempfile import NamedTemporaryFile
+import re
 import os
 import subprocess
 import sys
+import socket
 
 # TODO: allow .qsubmitrc to override this
 LOCATIONS = {
     'robotarium': {
         'engine': 'slurm',
-        'hostname-d': r'cm\.cluster',
+        'hostname': r'.*cm\.cluster',
     },
     'ufal': {
         'engine': 'sge',
-        'hostname-d': r'.*ms.mff.cuni.cz',
+        'hostname': r'.*ms\.mff\.cuni\.cz',
     },
+    'bwlf': {
+        'engine': 'grun',
+        'hostname': r'bwlf.*',
+    }
 }
 
 
@@ -29,6 +35,24 @@ ENGINES = {
             'maxvmem_cmd': '',
             'usage_cmd': '',
             'load_profile_cmd': '[ -e /net/projects/SGE/user/sge_profile ] && . /net/projects/SGE/user/sge_profile',
+        }
+    },
+    'grun': {
+        'submit_cmd': 'qsub -oe <LOGDIR><NAME>.o%j',
+        'params': {
+            'name': '-j <NAME>',
+            'mem': '--mem=<MEM>',
+            'cpus': '-c <CPUS>',
+            'queue': '',  # not supported
+            'hold': '-hold_jid <HOLD>',
+        },
+        'script': {
+            'print_info': 'echo "NOT IMPLEMENTED"',
+            'resource_cmd': 'echo "NOT IMPLEMENTED"',
+            'info_cmd': 'echo "NOT IMPLEMENTED"',
+            'maxvmem_cmd': 'echo "NOT IMPLEMENTED"',
+            'usage_cmd': 'echo "NOT IMPLEMENTED"',
+            'load_profile_cmd': '',
         }
     },
     'slurm': {
@@ -130,8 +154,12 @@ echo "=============================="
 
 
 def detect_location():
-    # XXX
-    return 'robotarium'
+    """Check for hostname patterns, if they correspond to any of the preset locations."""
+    hostname = socket.getfqdn()
+    for loc, params in LOCATIONS.iteritems():
+        if re.search(params['hostname'], hostname):
+            return loc
+    raise Exception('Qsubmit not configured to use at %s' % hostname)
 
 
 def run_script(args):
