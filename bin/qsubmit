@@ -11,6 +11,10 @@ import socket
 
 # TODO: allow .qsubmitrc to override this
 LOCATIONS = {
+    'bwlf': {
+        'engine': 'grun',
+        'hostname': r'(bwlf.*|jove|amaterasu|osiris)',
+    },
     'robotarium': {
         'engine': 'slurm',
         'hostname': r'.*cm\.cluster',
@@ -19,21 +23,25 @@ LOCATIONS = {
         'engine': 'sge',
         'hostname': r'.*ms\.mff\.cuni\.cz',
     },
-    'bwlf': {
-        'engine': 'grun',
-        'hostname': r'(bwlf.*|jove|amaterasu|osiris)',
-    }
 }
 
 
 ENGINES = {
     'sge': {
+        'submit_cmd': 'qsub -cwd -j y -o <LOGDIR><NAME>.o$JOB_ID',
+        'params': {
+            'name': '-N <NAME>',
+            'mem': '-l mem_free=<MEM>,act_mem_free=<MEM>,h_vmem=<MEM>',
+            'cpus': '-pe smp <CPUS>',
+            'queue': '-q <QUEUE>',
+            'hold': '-hold_jid <HOLD>',
+        },
         'script': {
             'print_info': 'qstat -j <JOB_ID>',
-            'resource_cmd': '',
-            'info_cmd': '',
-            'maxvmem_cmd': '',
-            'usage_cmd': '',
+            'resource_cmd': 'qstat -j $JOB_ID | grep -e "^hard resource_list" | cut -d " " -f 11-; echo NSLOTS=$NSLOTS',
+            'info_cmd': 'echo "NOT IMPLEMENTED"',
+            'maxvmem_cmd': 'qstat -j $JOB_ID | grep -e "^usage" | cut -f 5 -d, | cut -d = -f 2',
+            'usage_cmd': 'qstat -j $JOB_ID | grep "^usage" | cut -b 29-',
             'load_profile_cmd': '[ -e /net/projects/SGE/user/sge_profile ] && . /net/projects/SGE/user/sge_profile',
         }
     },
