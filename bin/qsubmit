@@ -35,6 +35,7 @@ ENGINES = {
             'cpus': '-pe smp <CPUS>',
             'queue': '-q <QUEUE>',
             'hold': '-hold_jid <HOLD>',
+            'gpus': '-l gpu=<GPUS>,gpu_ram=<GPU_MEM>',
         },
         'script': {
             'print_info': 'qstat -j <JOB_ID>',
@@ -52,7 +53,6 @@ ENGINES = {
             'name': '-j <NAME>',
             'mem': '--mem=<MEM>',
             'cpus': '-c <CPUS>',
-            'queue': '',  # not supported
             'hold': '-hold_jid <HOLD>',
         },
         'script': {
@@ -206,12 +206,19 @@ def run_script(args):
                 val = [val]
             for val_ in val:
                 arg = engine['params'][param].replace('<' + param.upper() + '>', str(val_))
+                # replace any secondary parameters tied to this one
+                # e.g. GPU memory for # GPUs
+                for m in reversed(list(re.finditer('<([A-Z_]+)>', arg))): 
+                    secondary_param = m.group(1).lower()
+                    secondary_val = vars(args).get(secondary_param)
+                    if secondary_val:
+                        arg = arg[:m.start()] + secondary_val + arg[m.end():]
                 run_cmd.extend(arg.split(' '))
     if 'script_prepend' in engine:
         run_cmd.append(engine['script_prepend'])
     run_cmd.append(script_tmpfile.name)
     # print the final command for clarity
-    print >> sys.stderr, 'Qsubmit command:\n', ' '.join(['"%s"' % tok if ' ' in tok else tok
+    print >> sys.stderr, 'Qsubmit command:\n', ' '.join([('"%s"' % tok if ' ' in tok else tok)
                                                          for tok in run_cmd])
     # run the command
     # TODO read output and get the id of the process
@@ -225,6 +232,8 @@ if __name__ == '__main__':
     ap.add_argument('-n', '--name', '--jobname', help='Job name', default='qsubmit')
     ap.add_argument('-q', '--queue', help='Name of the queue to send the command to')
     ap.add_argument('-c', '--cpus', '--cores', help='Number of CPU cores to use', type=int, default=1)
+    ap.add_argument('-g', '--gpus', help='Number of GPUs to use', type=int, default=0)
+    ap.add_argument('-M', '--gpu-mem', help='Amount of GPU memory to use', default='1g')
     ap.add_argument('-m', '--mem', help='Amount of memory to use', default='1g')
     ap.add_argument('-l', '--logdir', help='Directory where the log file will be stored')
     ap.add_argument('-w', '--hold', '--wait', help='Hold until jobs with the given IDs are completed',
