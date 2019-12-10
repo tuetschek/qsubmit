@@ -218,8 +218,8 @@ def run_script(args):
         run_cmd.append(engine['script_prepend'])
     run_cmd.append(script_tmpfile.name)
     # print the final command for clarity
-    print >> sys.stderr, 'Qsubmit command:\n', ' '.join([('"%s"' % tok if ' ' in tok else tok)
-                                                         for tok in run_cmd])
+    print('Qsubmit command:\n', ' '.join([('"%s"' % tok if ' ' in tok else tok)
+                                          for tok in run_cmd]), file=sys.stderr)
     # run the command
     # TODO read output and get the id of the process
     subprocess.call(run_cmd)
