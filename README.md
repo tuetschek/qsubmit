@@ -12,9 +12,9 @@ my current workplace (Heriot-Watt University/Robotarium, SLURM).
 Usage
 -----
 
-You can install the script using `pip`:
+Requires Python 3. You can install the script using `pip`:
 ```
-pip install git+https://github.com/tuetschek/qsubmit
+pip3 install git+https://github.com/tuetschek/qsubmit
 ```
 
 Run the script to see the available options:
