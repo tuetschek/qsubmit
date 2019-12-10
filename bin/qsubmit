@@ -180,7 +180,7 @@ def run_script(args):
         engine = ENGINES[LOCATIONS[location]['engine']]
 
     # create a script tempfile
-    script_tmpfile = NamedTemporaryFile(suffix='.bash', prefix='.qsubmit-', dir=os.getcwd(), encoding='UTF-8', delete=False)
+    script_tmpfile = NamedTemporaryFile(mode='w', suffix='.bash', prefix='.qsubmit-', dir=os.getcwd(), encoding='UTF-8', delete=False)
 
     # create script text
     script_text = SCRIPT_TEMPLATE
