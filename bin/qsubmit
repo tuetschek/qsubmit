@@ -165,7 +165,7 @@ echo "=============================="
 def detect_location():
     """Check for hostname patterns, if they correspond to any of the preset locations."""
     hostname = socket.getfqdn()
-    for loc, params in LOCATIONS.iteritems():
+    for loc, params in LOCATIONS.items():
         if re.search(params['hostname'], hostname):
             return loc
     raise Exception('Qsubmit not configured to use at %s' % hostname)
@@ -184,7 +184,7 @@ def run_script(args):
 
     # create script text
     script_text = SCRIPT_TEMPLATE
-    for var_name, value in engine['script'].iteritems():
+    for var_name, value in engine['script'].items():
         script_text = script_text.replace('<' + var_name.upper() + '>', value)
     script_text = script_text.replace('<SCRIPT_TMPFILE>', script_tmpfile.name)
     main_cmd = " ".join(args.command)
