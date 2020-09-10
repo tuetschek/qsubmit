@@ -7,7 +7,8 @@ _Wrapper for batch engine submission commands (a Python remake of
 This script attempts to abstract away from local batch engine quirks 
 and create a unified job submission interface, wherever you run it.
 It's a work-in-progress, now only supporting the local settings at
-my current workplace (Heriot-Watt University/Robotarium, SLURM).
+my current and former workplaces (Charles University/UFAL -- Son of Grid 
+Engine, Heriot-Watt University/Robotarium -- SLURM).
 
 Usage
 -----
@@ -33,7 +34,7 @@ and send me [a pull request](https://github.com/tuetschek/qsubmit/pulls)!
 License
 -------
 
-Copyright (c) 2017 Ondřej Dušek
+Copyright (c) 2017-2020 Ondřej Dušek
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
