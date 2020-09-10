@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import socket
+import shlex
 
 # TODO: allow .qsubmitrc to override this
 LOCATIONS = {
@@ -28,9 +29,9 @@ LOCATIONS = {
 
 ENGINES = {
     'sge': {
-        'submit_cmd': 'qsub -cwd -j y -o <LOGDIR><NAME>.o$JOB_ID',
+        'submit_cmd': 'qsub -cwd -j y -o "<LOGDIR><NAME>.o$JOB_ID"',
         'params': {
-            'name': '-N <NAME>',
+            'name': '-N "<NAME>"',
             'mem': '-l mem_free=<MEM>,act_mem_free=<MEM>,h_vmem=<MEM>',
             'cpus': '-pe smp <CPUS>',
             'queue': '-q <QUEUE>',
@@ -47,10 +48,10 @@ ENGINES = {
         }
     },
     'grun': {
-        'submit_cmd': 'grun -oe <LOGDIR><NAME>.o%j -nowait',
+        'submit_cmd': 'grun -oe "<LOGDIR><NAME>.o%j" -nowait',
         'script_prepend': '/bin/bash',
         'params': {
-            'name': '-j <NAME>',
+            'name': '-j "<NAME>"',
             'mem': '--mem=<MEM>',
             'cpus': '-c <CPUS>',
             'hold': '-hold_jid <HOLD>',
@@ -198,7 +199,7 @@ def run_script(args):
     # get the engine params (replace job name + logdir in the main command)
     run_cmd = engine['submit_cmd'].replace('<NAME>', args.name or 'qsubmit')
     run_cmd = run_cmd.replace('<LOGDIR>', (args.logdir or '.') + '/')
-    run_cmd = run_cmd.split(' ')  # TODO use something more intelligent than "split(' ')"
+    run_cmd = shlex.split(run_cmd)
     for param in engine['params']:
         val = vars(args).get(param)
         if val:
@@ -213,7 +214,7 @@ def run_script(args):
                     secondary_val = vars(args).get(secondary_param)
                     if secondary_val:
                         arg = arg[:m.start()] + secondary_val + arg[m.end():]
-                run_cmd.extend(arg.split(' '))
+                run_cmd.extend(shlex.split(arg))
     if 'script_prepend' in engine:
         run_cmd.append(engine['script_prepend'])
     run_cmd.append(script_tmpfile.name)
