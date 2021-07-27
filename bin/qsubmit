@@ -255,4 +255,6 @@ if __name__ == '__main__':
     ap.add_argument('command', nargs='*', help='The arguments for the command to be run')
 
     args=ap.parse_args()
+    if not args.command and not args.interactive:
+        ap.error('Cannot run with an empty batch job (use -i or input command).')
     run_script(args)
