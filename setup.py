@@ -11,5 +11,6 @@ setup(
     download_url='https://github.com/tuetschek/qsubmit.git',
     license='Apache 2.0',
     scripts=['bin/qsubmit'],
+    packages=find_packages(),
 )
 
