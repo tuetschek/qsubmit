@@ -374,7 +374,7 @@ class Job:
         # the report is retrieved only once
         if self._report is None:
             # try to retrieve the qacct report
-            output = subprocess.check_output('qacct -j ' + self.jobid)
+            output = subprocess.check_output('qacct -j ' + self.jobid, encoding='UTF-8')
             self._report = {}
             for line in output.split("\n")[1:]:
                 key, val = re.split(r'\s+', line, 1)
@@ -439,7 +439,7 @@ class Job:
     def delete(self):
         """Delete this job."""
         if self.submitted:
-            subprocess.check_output('qdel ' + self.jobid)
+            subprocess.check_output('qdel ' + self.jobid, encoding='UTF-8')
 
     @property
     def host(self):
@@ -544,7 +544,7 @@ class Job:
         """Parse the qstat command and try to retrieve the current job
         state and the machine it is running on."""
         # get state of job assuming it is in the queue
-        output = subprocess.check_output('qstat')
+        output = subprocess.check_output('qstat', encoding='UTF-8')
         # get the relevant line of the qstat output
         output = next((l for l in output.split("\n") if re.search(self.jobid, l)), None)
         # job does not exist anymore
