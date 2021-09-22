@@ -551,8 +551,8 @@ class Job:
         if output is None:
             return self.FINISH, None
         # parse the correct line:
-        fields = re.split(r'\s+', output.strip())
-        state, host = fields[4], fields.get(7)
+        fields = re.split(r'\s+', output.strip()) + [''] * 7
+        state, host = fields[4], fields[7]
         host = re.sub(r'.*@([^.]+)\..*', r'\1', host) if '@' in host else ''
         return state, host
 
