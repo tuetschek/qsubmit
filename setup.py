@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='qsubmit',
-    version='0.0.2dev',
+    version='0.0.3dev',
     description='Batch engine job submission wrapper',
     author='Ondrej Dusek',
     author_email='o.dusek@hw.ac.uk',
