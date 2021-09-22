@@ -546,12 +546,13 @@ class Job:
         # get state of job assuming it is in the queue
         output = subprocess.check_output('qstat', encoding='UTF-8')
         # get the relevant line of the qstat output
+        import pudb; pu.db
         output = next((l for l in output.split("\n") if re.search(self.jobid, l)), None)
         # job does not exist anymore
         if output is None:
             return self.FINISH, None
         # parse the correct line:
-        fields = re.split(r'\s+', output)
+        fields = re.split(r'\s+', output.strip())
         state, host = fields[4], fields[7]
         host = re.sub(r'.*@([^.]+)\..*', r'\1', host)
         return state, host
