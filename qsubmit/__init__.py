@@ -254,7 +254,7 @@ class Job:
     TIME_POLL_DELAY = 60
 
     def __init__(self, code=None, command=None,
-                 name=None, work_dir=None, dependencies=None,
+                 name=None, work_dir=None, log_dir=None, dependencies=None,
                  mem=DEFAULT_MEMORY, cpus=DEFAULT_CPUS,
                  gpus=None, gpu_mem=DEFAULT_GPU_MEM,
                  engine=None, location=None, queue=None,
@@ -271,7 +271,7 @@ class Job:
             location = location or detect_location()
             self.engine = ENGINES[LOCATIONS[location]['engine']]
         self.code = code
-        self.command = command
+        self.command = command if isinstance(command, list) else shlex.split(command)
         self.code_templ = code_templ
         self.script_templ = script_templ
         self.mem = mem
@@ -290,6 +290,7 @@ class Job:
         self._name = name if name is not None else self._generate_name()
         self.submitted = False
         self.work_dir = work_dir if work_dir is not None else os.getcwd()
+        self.log_dir = log_dir
 
     def submit(self, print_cmd=None):
         """Submit the job to the cluster.
@@ -314,7 +315,7 @@ class Job:
 
         # get the engine params (replace job name + logdir in the main command)
         run_cmd = run_cmd.replace('<NAME>', self.name or 'qsubmit')
-        run_cmd = run_cmd.replace('<LOGDIR>', (self.work_dir or '.') + '/')
+        run_cmd = run_cmd.replace('<LOGDIR>', (self.log_dir or '.') + '/')
         run_cmd = shlex.split(run_cmd)
 
         # add resource requests and dependencies
@@ -374,9 +375,11 @@ class Job:
         # the report is retrieved only once
         if self._report is None:
             # try to retrieve the qacct report
-            output = subprocess.check_output('qacct -j ' + self.jobid, encoding='UTF-8')
+            output = subprocess.check_output(['qacct', '-j', self.jobid], encoding='UTF-8')
             self._report = {}
-            for line in output.split("\n")[1:]:
+            for line in output.split("\n"):
+                if ' ' not in line:
+                    continue
                 key, val = re.split(r'\s+', line, 1)
                 self._report[key] = val.strip()
         return self._report
@@ -439,7 +442,7 @@ class Job:
     def delete(self):
         """Delete this job."""
         if self.submitted:
-            subprocess.check_output('qdel ' + self.jobid, encoding='UTF-8')
+            subprocess.check_output(['qdel', self.jobid], encoding='UTF-8')
 
     @property
     def host(self):
@@ -490,7 +493,7 @@ class Job:
         for var_name, value in self.engine['script'].items():
             script_text = script_text.replace('<' + var_name.upper() + '>', value)
         script_text = script_text.replace('<SCRIPT_TMPFILE>', script_tmpfile.name)
-        main_cmd = " ".join(self.command)
+        main_cmd = ' '.join([shlex.quote(t) for t in self.command])
         script_text = script_text.replace('<MAIN_CMD>', main_cmd)
         script_text = script_text.replace('<MAIN_CMD_ESC>', main_cmd.replace("'", "'\"'\"'"))
 
@@ -544,7 +547,7 @@ class Job:
         """Parse the qstat command and try to retrieve the current job
         state and the machine it is running on."""
         # get state of job assuming it is in the queue
-        output = subprocess.check_output('qstat', encoding='UTF-8')
+        output = subprocess.check_output(['qstat'], encoding='UTF-8')
         # get the relevant line of the qstat output
         output = next((l for l in output.split("\n") if re.search(self.jobid, l)), None)
         # job does not exist anymore
