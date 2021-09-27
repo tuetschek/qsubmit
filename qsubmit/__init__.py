@@ -271,7 +271,7 @@ class Job:
             location = location or detect_location()
             self.engine = ENGINES[LOCATIONS[location]['engine']]
         self.code = code
-        self.command = command if isinstance(command, list) else shlex.split(command)
+        self.command = command
         self.code_templ = code_templ
         self.script_templ = script_templ
         self.mem = mem
@@ -493,7 +493,7 @@ class Job:
         for var_name, value in self.engine['script'].items():
             script_text = script_text.replace('<' + var_name.upper() + '>', value)
         script_text = script_text.replace('<SCRIPT_TMPFILE>', script_tmpfile.name)
-        main_cmd = ' '.join([shlex.quote(t) for t in self.command])
+        main_cmd = ' '.join([shlex.quote(t) for t in self.command]) if isinstance(self.command, list) else self.command
         script_text = script_text.replace('<MAIN_CMD>', main_cmd)
         script_text = script_text.replace('<MAIN_CMD_ESC>', main_cmd.replace("'", "'\"'\"'"))
 
