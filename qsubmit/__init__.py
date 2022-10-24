@@ -16,6 +16,7 @@ if sys.version_info < (3,10):
     import collections
 else:
     import collections.abc as collections
+import fnmatch
 
 
 """Interface for running any Python code as a job on the cluster
@@ -283,7 +284,7 @@ class Job:
         self.cpus = cpus
         self.gpus = gpus
         self.gpu_mem = gpu_mem
-        self.queue = queue
+        self.queue = self._parse_queue(location, queue)
         self._jobid = None
         self._host = None
         self._state = None
@@ -475,6 +476,15 @@ class Job:
         """Return the job id.
         """
         return self._jobid
+
+    def _parse_queue(self, location, arg_queue):
+        if location != "ufal":
+            return arg_queue
+        options = ["gpu-troja","gpu-ms","cpu-troja","cpu-ms"]
+        selected = fnmatch.filter(options, arg_queue)
+        return ",".join(selected)
+
+
 
     def _get_code_script(self):
         """Join headers and code to create a meaningful Python script."""
