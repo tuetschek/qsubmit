@@ -487,10 +487,10 @@ class Job:
         gpu_options = ["gpu-troja","gpu-ms"]
         cpu_options = ["cpu-troja","cpu-ms"]
 
-        if queue is None:
-            options = cpu_options
         if gpus is not None and gpus > 0:
             options = gpu_options
+        elif queue is None:
+            options = cpu_options
         else:
             options = cpu_options + gpu_options
         if queue is None:
