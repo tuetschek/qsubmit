@@ -37,7 +37,7 @@ if __name__ == '__main__':
     ap.add_argument('-n', '--name', '--jobname', help='Job name', default='qsubmit')
     ap.add_argument('-q', '--queue', help='Name of the queue to send the command to')
     ap.add_argument('-c', '--cpus', '--cores', help='Number of CPU cores to use', type=int, default=1)
-    ap.add_argument('-g', '--gpus', help='Number of GPUs to use', type=int, default=0)
+    ap.add_argument('-g', '-gpus', '--gpus', help='Number of GPUs to use', type=int, default=0)
     ap.add_argument('-M', '--gpu-mem', help='Amount of GPU memory to use', default='1g')
     ap.add_argument('-m', '--mem', help='Amount of memory to use', default='1g')
     ap.add_argument('-l', '--logdir', help='Directory where the log file will be stored')

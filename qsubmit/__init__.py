@@ -90,13 +90,15 @@ ENGINES = {
             'cpus': '-c <CPUS>',
             'queue': '-p <QUEUE>',
             'hold': '-d afterany:<HOLD>',
+            'gpus': '--gres=gpu:<GPUS>',
         },
         'script': {
             'print_info': 'echo "NOT IMPLEMENTED"',
             'resource_cmd': 'echo "NOT IMPLEMENTED"',
             'info_cmd': 'echo "NOT IMPLEMENTED"',
             'maxvmem_cmd': 'echo "NOT IMPLEMENTED"',
-            'usage_cmd': 'echo "NOT IMPLEMENTED"',
+            # credits to Dušan:
+            'usage_cmd': 'sacct -n -j $SLURM_JOB_ID.batch --format=MaxVMSize,MaxVMSizeNode,MaxPages,ReqMem,AllocTRES | tr -s " " "," | sed \'s/^,//;s/,$//\'',
             'load_profile_cmd': '',
         }
     },
@@ -284,7 +286,7 @@ class Job:
         self.cpus = cpus
         self.gpus = gpus
         self.gpu_mem = gpu_mem
-        self.queue = self._parse_queue(location, queue)
+        self.queue = self._parse_queue(location, queue, gpus)
         self._jobid = None
         self._host = None
         self._state = None
@@ -477,11 +479,23 @@ class Job:
         """
         return self._jobid
 
-    def _parse_queue(self, location, arg_queue):
+    def _parse_queue(self, location, queue, gpus):
+        """on ufal, we can use wildcars to specify queues, or number of GPUs to imply GPU queues
+        """
         if location != "ufal":
-            return arg_queue
-        options = ["gpu-troja","gpu-ms","cpu-troja","cpu-ms"]
-        selected = fnmatch.filter(options, arg_queue)
+            return queue
+        gpu_options = ["gpu-troja","gpu-ms"]
+        cpu_options = ["cpu-troja","cpu-ms"]
+
+        if queue is None:
+            options = cpu_options
+        if gpus is not None and gpus > 0:
+            options = gpu_options
+        else:
+            options = cpu_options + gpu_options
+        if queue is None:
+            queue = "*"
+        selected = fnmatch.filter(options, queue)
         return ",".join(selected)
 
 
