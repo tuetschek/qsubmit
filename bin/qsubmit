@@ -20,6 +20,10 @@ def run_script(args):
     del args['interactive']
     del args['hold']
 
+
+    if len(args['command']) == 1:
+        args['command'] = args['command'][0]
+
     job = Job(**args)
     job.submit(print_cmd=sys.stderr)
     if job.jobid:

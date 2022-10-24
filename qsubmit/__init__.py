@@ -8,9 +8,14 @@ import string
 import random
 import re
 import time
-import collections
 import socket
 import shlex
+
+import sys
+if sys.version_info < (3,10):
+    import collections
+else:
+    import collections.abc as collections
 
 
 """Interface for running any Python code as a job on the cluster
@@ -30,7 +35,7 @@ LOCATIONS = {
         'hostname': r'.*cm\.cluster',
     },
     'ufal': {
-        'engine': 'sge',
+        'engine': 'slurm',
         'hostname': r'.*ms\.mff\.cuni\.cz',
     },
 }
