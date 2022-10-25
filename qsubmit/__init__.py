@@ -37,8 +37,12 @@ LOCATIONS = {
     },
     'ufal': {
         'engine': 'slurm',
-        'hostname': r'.*ms\.mff\.cuni\.cz',
+        'hostname': r'.*(?<!aic)\.ms\.mff\.cuni\.cz',
     },
+    'ufal-aic': {
+        'engine': 'qsub',
+        'hostname': r'aic\.ms\.mff\.cuni\.cz',
+    }
 }
 
 
