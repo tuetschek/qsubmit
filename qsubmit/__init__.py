@@ -286,7 +286,7 @@ class Job:
         self.cpus = cpus
         self.gpus = gpus
         self.gpu_mem = gpu_mem
-        self.queue = self._parse_queue(location, queue, gpus)
+        self.queue, self.gpus = self._parse_queue(location, queue, gpus)
         self._jobid = None
         self._host = None
         self._state = None
@@ -480,10 +480,10 @@ class Job:
         return self._jobid
 
     def _parse_queue(self, location, queue, gpus):
-        """on ufal, we can use wildcars to specify queues, or number of GPUs to imply GPU queues
+        """on ufal, we can use wildcards to specify queues, or number of GPUs to imply GPU queues
         """
         if location != "ufal":
-            return queue
+            return queue, gpus
         gpu_options = ["gpu-troja","gpu-ms"]
         cpu_options = ["cpu-troja","cpu-ms"]
 
@@ -491,6 +491,7 @@ class Job:
             options = gpu_options
         elif queue is None:
             options = cpu_options
+            gpus = 0
         else:
             options = cpu_options + gpu_options
         if queue is None:
@@ -498,8 +499,11 @@ class Job:
         selected = fnmatch.filter(options, queue)
         if selected == []:
             all_q = ", ".join(gpu_options+cpu_options)
-            raise ValueError(f"Incorrect -queue parameter value. Possible values are {all_q}, or wildcar expression matching any of them.")
-        return ",".join(selected)
+            raise ValueError(f"Incorrect -queue parameter value. Possible values are {all_q}, or wildcard expression matching any of them.")
+        out_q = ",".join(selected)
+        if "gpu" in out_q and (gpus is None or gpus == 0):
+            gpus = 1
+        return out_q, gpus
 
 
 
