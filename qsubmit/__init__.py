@@ -496,6 +496,9 @@ class Job:
         if queue is None:
             queue = "*"
         selected = fnmatch.filter(options, queue)
+        if selected == []:
+            all_q = ", ".join(gpu_options+cpu_options)
+            raise ValueError(f"Incorrect -queue parameter value. Possible values are {all_q}, or wildcar expression matching any of them.")
         return ",".join(selected)
 
 
