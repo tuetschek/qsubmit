@@ -8,9 +8,15 @@ import string
 import random
 import re
 import time
-import collections
 import socket
 import shlex
+
+import sys
+if sys.version_info < (3,10):
+    import collections
+else:
+    import collections.abc as collections
+import fnmatch
 
 
 """Interface for running any Python code as a job on the cluster
@@ -30,7 +36,7 @@ LOCATIONS = {
         'hostname': r'.*cm\.cluster',
     },
     'ufal': {
-        'engine': 'sge',
+        'engine': 'slurm',
         'hostname': r'.*ms\.mff\.cuni\.cz',
     },
 }
@@ -84,13 +90,15 @@ ENGINES = {
             'cpus': '-c <CPUS>',
             'queue': '-p <QUEUE>',
             'hold': '-d afterany:<HOLD>',
+            'gpus': '--gres=gpu:<GPUS>',
         },
         'script': {
             'print_info': 'echo "NOT IMPLEMENTED"',
             'resource_cmd': 'echo "NOT IMPLEMENTED"',
             'info_cmd': 'echo "NOT IMPLEMENTED"',
             'maxvmem_cmd': 'echo "NOT IMPLEMENTED"',
-            'usage_cmd': 'echo "NOT IMPLEMENTED"',
+            # credits to Dušan:
+            'usage_cmd': 'sacct -n -j $SLURM_JOB_ID.batch --format=MaxVMSize,MaxVMSizeNode,MaxPages,ReqMem,AllocTRES | tr -s " " "," | sed \'s/^,//;s/,$//\'',
             'load_profile_cmd': '',
         }
     },
@@ -278,7 +286,7 @@ class Job:
         self.cpus = cpus
         self.gpus = gpus
         self.gpu_mem = gpu_mem
-        self.queue = queue
+        self.queue, self.gpus = self._parse_queue(location, queue, gpus)
         self._jobid = None
         self._host = None
         self._state = None
@@ -470,6 +478,34 @@ class Job:
         """Return the job id.
         """
         return self._jobid
+
+    def _parse_queue(self, location, queue, gpus):
+        """on ufal, we can use wildcards to specify queues, or number of GPUs to imply GPU queues
+        """
+        if location != "ufal":
+            return queue, gpus
+        gpu_options = ["gpu-troja","gpu-ms"]
+        cpu_options = ["cpu-troja","cpu-ms"]
+
+        if gpus is not None and gpus > 0:
+            options = gpu_options
+        elif queue is None:
+            options = cpu_options
+            gpus = 0
+        else:
+            options = cpu_options + gpu_options
+        if queue is None:
+            queue = "*"
+        selected = fnmatch.filter(options, queue)
+        if selected == []:
+            all_q = ", ".join(gpu_options+cpu_options)
+            raise ValueError(f"Incorrect -queue parameter value. Possible values are {all_q}, or wildcard expression matching any of them.")
+        out_q = ",".join(selected)
+        if "gpu" in out_q and (gpus is None or gpus == 0):
+            gpus = 1
+        return out_q, gpus
+
+
 
     def _get_code_script(self):
         """Join headers and code to create a meaningful Python script."""
