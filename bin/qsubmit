@@ -14,7 +14,6 @@ def run_script(args):
         del args['command']
     if args['gpus'] == 0:
         del args['gpus']
-        del args['gpu_mem']
     args['log_dir'] = args['logdir']
     args['dependencies'] = args['hold']
     del args['logdir']
