@@ -94,7 +94,8 @@ ENGINES = {
             'cpus': '-c <CPUS>',
             'queue': '-p <QUEUE>',
             'hold': '-d afterany:<HOLD>',
-            'gpus': '--gres=gpu:<GPUS>',
+            # in gpu_mem variable, there should be either a space " ", or it should be like '--constraint="gpuram11G|gpuram24G"'
+            'gpus': '--gres=gpu:<GPUS> <GPU_MEM>',
         },
         'script': {
             'print_info': 'echo "NOT IMPLEMENTED"',
@@ -197,6 +198,16 @@ if __name__ == '__main__':
     os.remove('<CODE_TMPFILE>')
 """
 
+#  gpuram size constraints on ÚFAL cluster
+#  TODO: it should be automated to reflect changes on cluster automatically 
+#  (and made effecitvely, possibly without this subprocess in every run)
+# sinfo -o "%N %f" | grep gpu | cut -f 2 -d' ' | cut -f 1 -d',' | sort -u
+UFAL_GPU_MEM_OPTIONS = """gpuram11G
+gpuram16G
+gpuram24G
+gpuram40G
+gpuram48G""".split()
+
 
 def detect_location():
     """Check for hostname patterns, if they correspond to any of the preset locations."""
@@ -289,8 +300,7 @@ class Job:
         self.mem = mem
         self.cpus = cpus
         self.gpus = gpus
-        self.gpu_mem = gpu_mem
-        self.queue, self.gpus = self._parse_queue(location, queue, gpus)
+        self.queue, self.gpus, self.gpu_mem = self._parse_queue(location, queue, gpus, gpu_mem)
         self._jobid = None
         self._host = None
         self._state = None
@@ -483,7 +493,7 @@ class Job:
         """
         return self._jobid
 
-    def _parse_queue(self, location, queue, gpus):
+    def _parse_queue(self, location, queue, gpus, gpu_mem):
         """on ufal, we can use wildcards to specify queues, or number of GPUs to imply GPU queues
         """
         if location != "ufal":
@@ -507,7 +517,29 @@ class Job:
         out_q = ",".join(selected)
         if "gpu" in out_q and (gpus is None or gpus == 0):
             gpus = 1
-        return out_q, gpus
+        return out_q, gpus, self._parse_gpu_mem(location, gpu_mem, gpus)
+
+    def _parse_gpu_mem(self, location, gpu_mem, gpus):
+        if location != "ufal":
+            return gpu_mem
+        # no constraints on gpu_mem:
+        if gpus == 0:
+            return " "
+        # gpuram11G
+        if "g" in gpu_mem.lower():
+            val = int(gpu_mem[:-1])
+        else:
+            val = int(gpu_mem)
+
+        sizes = [ int(g[6:-1]) for g in UFAL_GPU_MEM_OPTIONS ]
+        possible_sizes = [ s for s in sizes if s >= val ]
+        out = "|".join(f"gpuram{v}G" for v in possible_sizes)
+        if out:
+            out = f'--constraint="{out}"'
+        else:
+            print("No available gpuram size, exiting",file=sys.stderr)
+            sys.exit(1)
+        return out
 
 
 
