@@ -59,8 +59,8 @@ Contribution
 ------------
 
 If you like the idea and would like to add your own local settings to
-the mix, please do. Edit the [script file](bin/qsubmit) accordingly
-and send me [a pull request](https://github.com/tuetschek/qsubmit/pulls)!
+the mix, please do. Edit the [code](qsubmit/__init__.py) accordingly
+and send us [a pull request](https://github.com/ufal/qsubmit/pulls)!
 
 License
 -------
