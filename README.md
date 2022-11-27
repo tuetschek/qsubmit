@@ -30,7 +30,7 @@ Run the script to see the available options:
 qsubmit -h
 ```
 
-The general idea for executing a job is this:
+The basic command for executing a job is this:
 ```
 qsubmit [modifiers] [-n job-name] [resources] command
 ```
