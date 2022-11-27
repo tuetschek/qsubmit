@@ -43,7 +43,7 @@ As `resources`, you can specify:
 * `--gpu-mem` -- the required GPU memory 
 
 There are a few additional `modifiers` to `qsubmit`'s behavior:
-* `--hold/--wait <jobid>` -- waits for a specific other job
+* `--hold/--wait <jobid>` -- waits for a specified other job(s)
 * `--logdir` -- sets a target logfile directory (defaults to current directory)
 * `--location/--engine` -- setting for the cluster engine (location defaults to `ufal`, 
     engine defaults to `slurm`). You can set the `--engine` to `console` to run locally.
