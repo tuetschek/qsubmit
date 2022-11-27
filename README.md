@@ -35,10 +35,14 @@ The general idea for executing a job is this:
 qsubmit [modifiers] [-n job-name] [resources] command
 ```
 
-Under `resources`, you can specify the required number of `--cpus`, `--gpus`, 
-the target `--queue` name, the CPU `--mem`ory and `--gpu-mem`ory.
+As `resources`, you can specify:
+* `--cpus/--cores` -- the required number of CPUs
+* `--gpus` -- the required number of GPUs
+* `--queue` -- the target queue name
+* `--mem` -- the required CPU memory
+* `--gpu-mem` -- the required GPU memory 
 
-There are a few specific modifiers to `qsubmit`'s behavior:
+There are a few additional `modifiers` to `qsubmit`'s behavior:
 * `--hold/--wait <jobid>` -- waits for a specific other job
 * `--logdir` -- sets a target logfile directory (defaults to current directory)
 * `--location/--engine` -- setting for the cluster engine (location defaults to `ufal`, 
