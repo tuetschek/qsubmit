@@ -88,6 +88,7 @@ ENGINES = {
     },
     'slurm': {
         'submit_cmd': 'sbatch -o <LOGDIR><NAME>.o%j',
+        'interactive_cmd': 'srun --pty',
         'params': {
             'name': '-J <NAME>',
             'mem': '--mem=<MEM>',
@@ -199,7 +200,7 @@ if __name__ == '__main__':
 """
 
 #  gpuram size constraints on ÚFAL cluster
-#  TODO: it should be automated to reflect changes on cluster automatically 
+#  TODO: it should be automated to reflect changes on cluster automatically
 #  (and made effecitvely, possibly without this subprocess in every run)
 # sinfo -o "%N %f" | grep gpu | cut -f 2 -d' ' | cut -f 1 -d',' | sort -u
 UFAL_GPU_MEM_OPTIONS = """gpuram11G
