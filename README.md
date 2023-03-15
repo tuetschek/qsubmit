@@ -54,18 +54,55 @@ qsubmit --interactive [modifiers] [-n job-name] [resources]
 ```
 Note that the command is empty in this case.
 
+Qruncmd
+=======
+
+Runs the line processing command (one input line for one output line) on
+SIZE-sized sections of stdin in parallel qsubmit jobs, and prints the outputs
+to stdout. It goes through the input only once and uses constant working disk
+space. It gives the original
+
+It is a remake of the [old perl
+qruncmd](https://github.com/ufal/ufal-tools/blob/master/obsolete/qruncmd) that
+got obsolete when ÚFAL cluster moved to slurm.
+
+It is still work in progress. Only the case of non-failing jobs is implemented and tested.
+
+Also, the case when the command does not produce the same number of lines as on
+input is not implemented. The assumption of the expected number of output lines
+is hard-coded in the current version.
+
+Usage:
+------
+
+It has all the qsubmit parameters that define the parallel jobs, plus:
+
+  --workdir WORKDIR     workdir, default is qruncmd-workdir-XXXXXXXXX where X stands for random letter
+  --jobs JOBS, --workers JOBS
+                        How many workers to start. The workers concurrently wait for jobs (stdin sections saved to workdir), claim them, process and return the outputs.
+  -s SIZE, --size SIZE  How many lines in one job section.
+
+The basic usage command is like this:
+```
+cat large-train-data.txt | qruncmd "./slow-line-processing-tool" --jobs 50 -size 50000 > out
+```
+
+If anything fails, you can inspect the logs in workdir.
+
 
 Contribution
-------------
+============
 
 If you like the idea and would like to add your own local settings to
 the mix, please do. Edit the [code](qsubmit/__init__.py) accordingly
 and send us [a pull request](https://github.com/ufal/qsubmit/pulls)!
 
-License
--------
 
-Copyright (c) 2017-2022 Ondřej Dušek, Dominik Macháček
+
+License
+=======
+
+Copyright (c) 2017-2023 Ondřej Dušek, Dominik Macháček
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
