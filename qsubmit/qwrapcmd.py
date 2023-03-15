@@ -80,7 +80,7 @@ while not os.path.exists(f"{workdir}/fast-poison-pill"):  # to be implemented in
         dfn = f"{workdir}/{fn}"
         lock = f"{dfn}.lock"
         ok = f"{dfn}.ok"
-        if not os.path.exists(ok) and not os.path.isdir(lock):
+        if os.path.exists(dfn) and not os.path.exists(ok) and not os.path.isdir(lock):
             try:
                 os.mkdir(lock)
             except FileExistsError:

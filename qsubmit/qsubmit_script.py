@@ -54,7 +54,7 @@ def qsubmit_argparser(name="qsubmit",desc="Batch engine script submission wrappe
     return ap
 
 def main():
-    ap = qsubmit_argparse()
+    ap = qsubmit_argparser()
 
     args=ap.parse_args()
     if not args.command and not args.interactive:
