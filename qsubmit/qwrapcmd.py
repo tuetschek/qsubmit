@@ -30,9 +30,11 @@ out = open(fifofn,"r")
 
 #lines = 0
 def process_job(inname):
-
+    global complete
+    complete = False
     lines = 0
     def reading():
+        global complete
         received = 0
         with open(inname+".out","w") as outf:
             while True:
@@ -50,7 +52,6 @@ def process_job(inname):
     t.start()
 
     print(f"Processing {inname}",file=sys.stderr)
-    complete = False
     with open(inname,"r") as f:
         for line in f:
             print(line,end="",flush=True)
@@ -62,26 +63,32 @@ def process_job(inname):
     t.join()
 
 
-
+def sortjobs(jobs):
+    x = [ int(j.replace(job_pref+"_","")) for j in jobs ]
+    x = sorted(x)
+    return [ job_pref+"_" + str(i) for i in x ]
 
 
 while not os.path.exists(f"{workdir}/fast-poison-pill"):  # to be implemented in qruncmd.py
     iswork = False
+
+    jobs = []
     for fn in os.listdir(workdir):
         if fn.startswith(job_pref) and not fn.endswith("lock") and not fn.endswith("ok") and not fn.endswith("out"):
-            dfn = f"{workdir}/{fn}"
-            lock = f"{dfn}.lock"
-            ok = f"{dfn}.ok"
-            if not os.path.exists(ok) and not os.path.isdir(lock):
-                try:
-                    os.mkdir(lock)
-                except FileExistsError:
-                    continue
-                process_job(dfn)
-                Path(ok).touch()
-                os.rmdir(lock)
-
-                iswork = True
+            jobs.append(fn)
+    for fn in sortjobs(jobs):
+        dfn = f"{workdir}/{fn}"
+        lock = f"{dfn}.lock"
+        ok = f"{dfn}.ok"
+        if not os.path.exists(ok) and not os.path.isdir(lock):
+            try:
+                os.mkdir(lock)
+            except FileExistsError:
+                continue
+            process_job(dfn)
+            Path(ok).touch()
+            os.rmdir(lock)
+            iswork = True
     if not iswork and os.path.exists(f"{workdir}/slow-poison-pill"):
         break
     time.sleep(0.01)

@@ -4,6 +4,8 @@ from qsubmit.qsubmit_script import *
 from qsubmit import Job
 from pathlib import Path
 from copy import copy
+from threading import Thread
+import time
 
 import sys
 import os
@@ -43,6 +45,7 @@ class QruncmdJob:
         sys.stdout.flush()
         os.remove(self.fname)
         os.remove(self.fname+".out")
+        os.remove(self.fname+".ok")
 
 def temp_workdir_fname(pref):
     import string
@@ -77,20 +80,37 @@ def main():
         print(f"Workdir {workdir} already exists, maybe it should be cleared first?",file=sys.stderr)
 
     ######### start workers
-    cmd = " ".join(args.command)
-    for i in range(workers):
-        # stdbuf avoids stucking data between the pipes
-        wrapcmd = f"mkfifo {workdir}/out-fifo-worker-{i} && stdbuf -o0 python3 -m qsubmit.qwrapcmd {workdir} {workdir}/out-fifo-worker-{i} | stdbuf -o0 -i0 -e0 {cmd} > {workdir}/out-fifo-worker-{i} ; touch {workdir}/worker-{i}.end"
 
-        v = copy(args)
-        v.command = wrapcmd
-        if v.name is None or v.name == "qsubmit":
-            v.name = f"qruncmd-{i}"
-        if v.logdir is None:
-            v.logdir = workdir
 
-        # run qsubmit Job
-        run_script(v)
+
+    def start_workers():
+        started_workers = 0
+        cmd = " ".join(args.command)
+        for i in range(workers):
+            # stdbuf avoids stucking data between the pipes
+            wrapcmd = f"mkfifo {workdir}/out-fifo-worker-{i} && stdbuf -o0 python3 -m qsubmit.qwrapcmd {workdir} {workdir}/out-fifo-worker-{i} | stdbuf -o0 -i0 -e0 {cmd} > {workdir}/out-fifo-worker-{i} ; touch {workdir}/worker-{i}.end"
+
+            v = copy(args)
+            v.command = wrapcmd
+            if v.name is None or v.name == "qsubmit":
+                v.name = f"qruncmd-{i}"
+            if v.logdir is None:
+                v.logdir = workdir
+
+            # run qsubmit Job
+            run_script(v)
+            started_workers += 1
+            if started_workers % 10 == 0:
+                time.sleep(1)
+        print("all the workers have started",file=sys.stderr)
+
+    if workers > 10:
+        starting_thread = Thread(target=start_workers)
+        starting_thread.start()
+    else:
+        start_workers()
+        starting_thread = None
+
 
     ######### 
 
@@ -99,37 +119,65 @@ def main():
         d = f"{workdir}/slow-poison-pill"
         Path(d).touch()
 
-    max_jobs = workers+10
+    max_jobs = 2*workers
 
-    jobid = 0
     current_jobs = []
 
+    global iseof
     iseof = False  # True when the input is over
 
     ######## processing loop
 
-    while True:
-        if not iseof and len(current_jobs) < max_jobs:
-            j = QruncmdJob(jobid, workdir)
-            jobid += 1
-            for i in range(batch_size):
-                line = sys.stdin.readline()
-                if line != "":
-                    j.insert(line)
-                else:
-                    iseof = True
-                    slowpoison()
-                    break
-            current_jobs.append(j)
-            j.submit()
+    global stop_everything
 
-        while current_jobs and current_jobs[0].is_completed():
-            j = current_jobs.pop(0)
-            j.flush()
+    stop_everything = False
 
-        if iseof and not current_jobs:
-            break
-        # TODO: check the error status of the jobs, make sure there is no error...
+    def submitting_loop():
+        jobid = 0
+        global iseof
+        while not stop_everything:
+            if not iseof and len(current_jobs) < max_jobs:
+                j = QruncmdJob(jobid, workdir)
+                jobid += 1
+                for i in range(batch_size):
+                    line = sys.stdin.readline()
+                    if line != "":
+                        j.insert(line)
+                    else:
+                        iseof = True
+                        slowpoison()
+                        break
+                current_jobs.append(j)
+                j.submit()
+            else:
+                print(f"submitting loop is idle, {len(current_jobs)} < {max_jobs}",file=sys.stderr)
+                time.sleep(1)
+        print("submitting completed",file=sys.stderr)
+
+    def flushing_loop():
+        global stop_everything
+        while not stop_everything:
+            while current_jobs and current_jobs[0].is_completed():
+                j = current_jobs.pop(0)
+                j.flush()
+                print(f"flushing job {j.index}",file=sys.stderr)
+
+            if iseof and not current_jobs:
+                stop_everything = True
+                break
+            time.sleep(1)
+        print("flushing completed",file=sys.stderr)
+
+            # TODO: check the error status of the jobs, make sure there is no error...
+
+    submit_thread = Thread(target=submitting_loop)
+    submit_thread.start()
+
+    flushing_loop()
+
+    submit_thread.join()
+    if starting_thread is not None:
+        starting_thread.join()
 
 if __name__ == "__main__":
     main()
