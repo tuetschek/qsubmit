@@ -77,10 +77,14 @@ Usage:
 
 It has all the qsubmit parameters that define the parallel jobs, plus:
 
-  --workdir WORKDIR     workdir, default is qruncmd-workdir-XXXXXXXXX where X stands for random letter
+```
+  --workdir WORKDIR     workdir, default is qruncmd-workdir-XXXXXXXXX where X stands for random a letter
   --jobs JOBS, --workers JOBS
-                        How many workers to start. The workers concurrently wait for jobs (stdin sections saved to workdir), claim them, process and return the outputs.
+                        How many workers to start. The workers concurrently wait for jobs (stdin sections saved to workdir), 
+                        claim them, process and return the outputs.
   -s SIZE, --size SIZE  How many lines in one job section.
+```
+
 
 The basic usage command is like this:
 ```
