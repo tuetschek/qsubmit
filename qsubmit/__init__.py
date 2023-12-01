@@ -37,11 +37,11 @@ LOCATIONS = {
     },
     'ufal': {
         'engine': 'slurm',
-        'hostname': r'.*(?<!aic)\.ms\.mff\.cuni\.cz',
+        'hostname': r'.*(?<!aic\.hide)\.ms\.mff\.cuni\.cz',
     },
     'ufal-aic': {
-        'engine': 'qsub',
-        'hostname': r'aic\.ms\.mff\.cuni\.cz',
+        'engine': 'slurm',
+        'hostname': r'aic\.hide\.ms\.mff\.cuni\.cz',
     }
 }
 
@@ -498,7 +498,7 @@ class Job:
         """on ufal, we can use wildcards to specify queues, or number of GPUs to imply GPU queues
         """
         if location != "ufal":
-            return queue, gpus
+            return queue, gpus, self._parse_gpu_mem(location, gpu_mem, gpus)
         gpu_options = ["gpu-troja","gpu-ms"]
         cpu_options = ["cpu-troja","cpu-ms"]
 
@@ -522,6 +522,8 @@ class Job:
 
     def _parse_gpu_mem(self, location, gpu_mem, gpus):
         if location != "ufal":
+            if location == "ufal-aic":  # TODO change this to engine slurm
+                return " "
             return gpu_mem
         # no constraints on gpu_mem:
         if gpus == 0:
